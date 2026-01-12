@@ -1,52 +1,23 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { createBareServer } = require('@tomphttp/bare-server-node');
+
+const Corroded = require('../lib/server');
+const proxy = new Corroded({
+    codec: 'xor',
+    prefix: '/p/',
+    forceHttps: false,
+    ws: true,
+    cookie: true,
+    title: 'Corroded Page',
+});
+
+proxy.bundleScripts();
 
 const server = http.createServer((request, response) => {
-    
-    // Create a new bare server instance for this request
-    const bare = createBareServer('/bare/');
-    
-    // Handle bare server requests for Ultraviolet
-    if (bare.shouldRoute(request)) {
-        try {
-            bare.routeRequest(request, response);
-        } catch (error) {
-            console.error('Bare server error:', error);
-            if (!response.headersSent) {
-                response.writeHead(500, { 'Content-Type': 'text/plain' });
-                response.end('Proxy server error');
-            }
-        }
-        return;
-    }
-
-    // Serve UV bundle files
-    if (request.url.startsWith('/uv/')) {
-        const filePath = path.join(__dirname, request.url);
-        fs.readFile(filePath, (err, data) => {
-            if (err) {
-                response.writeHead(404, { 'Content-Type': 'text/plain' });
-                return response.end('File not found');
-            }
-            response.writeHead(200, { 'Content-Type': 'application/javascript' });
-            response.end(data);
-        });
-        return;
-    }
-
-    // Serve service worker
-    if (request.url === '/sw.js') {
-        fs.readFile(path.join(__dirname, 'sw.js'), (err, data) => {
-            if (err) {
-                response.writeHead(404, { 'Content-Type': 'text/plain' });
-                return response.end('Service worker not found');
-            }
-            response.writeHead(200, { 'Content-Type': 'application/javascript' });
-            response.end(data);
-        });
-        return;
+    // Handle proxy requests
+    if (request.url.startsWith(proxy.prefix)) {
+        return proxy.request(request, response);
     }
 
     // Serve images from ./img
@@ -57,6 +28,7 @@ const server = http.createServer((request, response) => {
                 response.writeHead(404, { 'Content-Type': 'text/plain' });
                 return response.end('Image not found');
             }
+            // Basic content-type detection
             const ext = path.extname(imgPath).toLowerCase();
             const mimeTypes = {
                 '.png': 'image/png',
@@ -78,24 +50,10 @@ const server = http.createServer((request, response) => {
     response.end(fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8'));
 });
 
-server.listen(process.env.PORT || 65440, () => {
-    console.log(`HTTP server running on port ${process.env.PORT || 65440}`);
-});
+server.on('upgrade', (clientRequest, clientSocket, clientHead) => 
+    proxy.upgrade(clientRequest, clientSocket, clientHead)
+);
 
-server.on('upgrade', (req, socket, head) => {
-    // Create a new bare server instance for this upgrade request
-    const bare = createBareServer('/bare/');
-    
-    if (bare.shouldRoute(req)) {
-        try {
-            bare.routeUpgrade(req, socket, head);
-        } catch (error) {
-            console.error('Bare server upgrade error:', error);
-            if (!socket.destroyed) {
-                socket.end();
-            }
-        }
-    } else {
-        socket.end();
-    }
+server.listen(process.env.PORT || 25569, () => {
+    console.log(`HTTP server running on port ${process.env.PORT || 25569}`);
 });

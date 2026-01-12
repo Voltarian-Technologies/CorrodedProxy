@@ -1,33 +1,79 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { createBareServer } = require('@mercuryworkshop/bare-mux');
+const https = require('https');
+const { URL } = require('url');
 
 const server = http.createServer((request, response) => {
     // Handle bare server requests for Ultraviolet
     if (request.url.startsWith('/bare/')) {
         try {
-            // Simple bare server implementation
-            const url = request.url.replace('/bare/', '');
-            if (!url) {
+            // Extract the target URL from the bare request
+            const targetUrl = request.url.replace('/bare/', '');
+            
+            if (!targetUrl) {
                 response.writeHead(400, { 'Content-Type': 'text/plain' });
-                response.end('Bad Request');
+                response.end('Bad Request: No URL provided');
                 return;
             }
             
-            // For now, just return a simple response to avoid the error
-            // In a full implementation, you'd fetch the actual URL
-            response.writeHead(200, { 
-                'Content-Type': 'text/plain',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            // Parse the target URL
+            let parsedUrl;
+            try {
+                parsedUrl = new URL(targetUrl);
+            } catch (e) {
+                response.writeHead(400, { 'Content-Type': 'text/plain' });
+                response.end('Bad Request: Invalid URL');
+                return;
+            }
+            
+            // Choose the appropriate protocol
+            const client = parsedUrl.protocol === 'https:' ? https : http;
+            
+            // Make the actual request to the target URL
+            const options = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+                path: parsedUrl.pathname + parsedUrl.search,
+                method: request.method,
+                headers: {
+                    ...request.headers,
+                    host: parsedUrl.hostname
+                }
+            };
+            
+            // Remove problematic headers
+            delete options.headers['host'];
+            delete options.headers['connection'];
+            delete options.headers['content-length'];
+            
+            const proxyReq = client.request(options, (proxyRes) => {
+                // Copy response headers
+                const headers = { ...proxyRes.headers };
+                delete headers['content-encoding'];
+                delete headers['content-length'];
+                
+                response.writeHead(proxyRes.statusCode, headers);
+                proxyRes.pipe(response);
             });
-            response.end(`Bare server response for: ${url}`);
+            
+            proxyReq.on('error', (err) => {
+                console.error('Proxy request error:', err);
+                if (!response.headersSent) {
+                    response.writeHead(500, { 'Content-Type': 'text/plain' });
+                    response.end('Proxy server error');
+                }
+            });
+            
+            // Pipe request body
+            request.pipe(proxyReq);
+            
         } catch (error) {
             console.error('Bare server error:', error);
-            response.writeHead(500, { 'Content-Type': 'text/plain' });
-            response.end('Proxy server error');
+            if (!response.headersSent) {
+                response.writeHead(500, { 'Content-Type': 'text/plain' });
+                response.end('Proxy server error');
+            }
         }
         return;
     }

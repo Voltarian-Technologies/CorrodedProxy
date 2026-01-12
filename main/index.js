@@ -3,6 +3,13 @@ const fs = require('fs');
 const path = require('path');
 
 const Corroded = require('../lib/server');
+const createUrlBlocker = require('../lib/server/url-blocker');
+
+const urlBlocker = createUrlBlocker({
+    blockMessage: 'This site is blocked by Corroded Proxy for security and productivity reasons.',
+    statusCode: 403
+});
+
 const proxy = new Corroded({
     codec: 'xor',
     prefix: '/p/',
@@ -10,6 +17,7 @@ const proxy = new Corroded({
     ws: true,
     cookie: true,
     title: 'Corroded Page',
+    requestMiddleware: [urlBlocker],
 });
 
 proxy.bundleScripts();

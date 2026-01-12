@@ -1,19 +1,19 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { createBareServer } = require('@tomphttp/bare-server-node');
+const { BareTransport } = require('@mercuryworkshop/bare-transport');
 
 const server = http.createServer((request, response) => {
     
-    // Create a new bare server instance for this request
-    const bare = createBareServer('/bare/');
+    // Create a new bare transport instance
+    const bare = new BareTransport('/bare/');
     
-    // Handle bare server requests for Ultraviolet
-    if (bare.shouldRoute(request)) {
+    // Handle bare transport requests for Ultraviolet
+    if (request.url.startsWith('/bare/')) {
         try {
-            bare.routeRequest(request, response);
+            bare.handleRequest(request, response);
         } catch (error) {
-            console.error('Bare server error:', error);
+            console.error('Bare transport error:', error);
             if (!response.headersSent) {
                 response.writeHead(500, { 'Content-Type': 'text/plain' });
                 response.end('Proxy server error');
@@ -83,14 +83,14 @@ server.listen(process.env.PORT || 65440, () => {
 });
 
 server.on('upgrade', (req, socket, head) => {
-    // Create a new bare server instance for this upgrade request
-    const bare = createBareServer('/bare/');
+    // Create a new bare transport instance for this upgrade request
+    const bare = new BareTransport('/bare/');
     
-    if (bare.shouldRoute(req)) {
+    if (req.url.startsWith('/bare/')) {
         try {
-            bare.routeUpgrade(req, socket, head);
+            bare.handleUpgrade(req, socket, head);
         } catch (error) {
-            console.error('Bare server upgrade error:', error);
+            console.error('Bare transport upgrade error:', error);
             if (!socket.destroyed) {
                 socket.end();
             }

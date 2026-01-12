@@ -209,26 +209,38 @@
                 </div>
             </div>
         </div>
+        <script src="uv/uv.bundle.js"></script>
+        <script src="uv/uv.config.js"></script>
         <script>
-            function xor(str) {
-                return encodeURIComponent(str.toString().split('').map( (char, ind) => ind % 2 ? String.fromCharCode(char.charCodeAt() ^ 2) : char).join(''));
+            const form = document.querySelector('.form');
+            const input = document.getElementById('url');
+            const goBtn = document.getElementById('go');
+
+            function handleSubmit() {
+                window.navigator.serviceWorker.register('./sw.js', {
+                    scope: __uv$config.prefix
+                }).then(() => {
+                    let url = input.value.trim();
+                    if (!isUrl(url)) url = 'https://www.google.com/search?q=' + url;
+                    else if (!(url.startsWith('https://') || url.startsWith('http://'))) url = 'http://' + url;
+
+                    window.location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
+                });
             }
 
-            var prUrl = document.getElementById("url")
-              , prGo = document.getElementById("go");
+            function isUrl(val = ''){
+                if (/^http(s?):\/\//.test(val) || val.includes('.') && val.substr(0, 1) !== ' ') return true;
+                return false;
+            };
 
-            function go(url) {
-                window.location.href = "p/" + xor(/^(http:\/\/|https:\/\/)/i.test(url) ? url : "https://" + url);
-            }
-
-            prUrl.addEventListener("keydown", function(e) {
-                if (e.code == "Enter" && prUrl.value)
-                    go(prUrl.value);
+            input.addEventListener("keydown", function(e) {
+                if (e.code == "Enter" && input.value)
+                    handleSubmit();
             }, false);
 
-            prGo.addEventListener("click", function() {
-                if (prUrl.value)
-                    go(prUrl.value);
+            goBtn.addEventListener("click", function() {
+                if (input.value)
+                    handleSubmit();
             }, false);
         </script>
     </body>

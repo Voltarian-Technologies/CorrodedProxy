@@ -2,22 +2,32 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const Corroded = require('../lib/server');
-const proxy = new Corroded({
-    codec: 'xor',
-    prefix: '/p/',
-    forceHttps: false,
-    ws: true,
-    cookie: true,
-    title: 'Corroded Page',
-});
-
-proxy.bundleScripts();
-
 const server = http.createServer((request, response) => {
-    // Handle proxy requests
-    if (request.url.startsWith(proxy.prefix)) {
-        return proxy.request(request, response);
+    // Serve UV bundle files
+    if (request.url.startsWith('/uv/')) {
+        const filePath = path.join(__dirname, request.url);
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                response.writeHead(404, { 'Content-Type': 'text/plain' });
+                return response.end('File not found');
+            }
+            response.writeHead(200, { 'Content-Type': 'application/javascript' });
+            response.end(data);
+        });
+        return;
+    }
+
+    // Serve service worker
+    if (request.url === '/sw.js') {
+        fs.readFile(path.join(__dirname, 'sw.js'), (err, data) => {
+            if (err) {
+                response.writeHead(404, { 'Content-Type': 'text/plain' });
+                return response.end('Service worker not found');
+            }
+            response.writeHead(200, { 'Content-Type': 'application/javascript' });
+            response.end(data);
+        });
+        return;
     }
 
     // Serve images from ./img
@@ -28,7 +38,6 @@ const server = http.createServer((request, response) => {
                 response.writeHead(404, { 'Content-Type': 'text/plain' });
                 return response.end('Image not found');
             }
-            // Basic content-type detection
             const ext = path.extname(imgPath).toLowerCase();
             const mimeTypes = {
                 '.png': 'image/png',
@@ -49,10 +58,6 @@ const server = http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': 'text/html' });
     response.end(fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8'));
 });
-
-server.on('upgrade', (clientRequest, clientSocket, clientHead) => 
-    proxy.upgrade(clientRequest, clientSocket, clientHead)
-);
 
 server.listen(process.env.PORT || 65440, () => {
     console.log(`HTTP server running on port ${process.env.PORT || 65440}`);

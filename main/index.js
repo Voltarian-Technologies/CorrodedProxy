@@ -3,13 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { createBareServer } = require('@tomphttp/bare-server-node');
 
-let bare = null;
-
 const server = http.createServer((request, response) => {
-    // Initialize bare server if not already done
-    if (!bare) {
-        bare = createBareServer('/bare/');
-    }
+    
+    // Create a new bare server instance for this request
+    const bare = createBareServer('/bare/');
     
     // Handle bare server requests for Ultraviolet
     if (bare.shouldRoute(request)) {
@@ -17,10 +14,10 @@ const server = http.createServer((request, response) => {
             bare.routeRequest(request, response);
         } catch (error) {
             console.error('Bare server error:', error);
-            // Reset bare server on error
-            bare = null;
-            response.writeHead(500, { 'Content-Type': 'text/plain' });
-            response.end('Proxy server error');
+            if (!response.headersSent) {
+                response.writeHead(500, { 'Content-Type': 'text/plain' });
+                response.end('Proxy server error');
+            }
         }
         return;
     }
@@ -86,14 +83,17 @@ server.listen(process.env.PORT || 65440, () => {
 });
 
 server.on('upgrade', (req, socket, head) => {
-    if (bare && bare.shouldRoute(req)) {
+    // Create a new bare server instance for this upgrade request
+    const bare = createBareServer('/bare/');
+    
+    if (bare.shouldRoute(req)) {
         try {
             bare.routeUpgrade(req, socket, head);
         } catch (error) {
             console.error('Bare server upgrade error:', error);
-            // Reset bare server on error
-            bare = null;
-            socket.end();
+            if (!socket.destroyed) {
+                socket.end();
+            }
         }
     } else {
         socket.end();

@@ -3,12 +3,25 @@ const fs = require('fs');
 const path = require('path');
 const { createBareServer } = require('@tomphttp/bare-server-node');
 
-const bare = createBareServer('/bare/');
+let bare = null;
 
 const server = http.createServer((request, response) => {
+    // Initialize bare server if not already done
+    if (!bare) {
+        bare = createBareServer('/bare/');
+    }
+    
     // Handle bare server requests for Ultraviolet
     if (bare.shouldRoute(request)) {
-        bare.routeRequest(request, response);
+        try {
+            bare.routeRequest(request, response);
+        } catch (error) {
+            console.error('Bare server error:', error);
+            // Reset bare server on error
+            bare = null;
+            response.writeHead(500, { 'Content-Type': 'text/plain' });
+            response.end('Proxy server error');
+        }
         return;
     }
 
@@ -73,8 +86,15 @@ server.listen(process.env.PORT || 65440, () => {
 });
 
 server.on('upgrade', (req, socket, head) => {
-    if (bare.shouldRoute(req)) {
-        bare.routeUpgrade(req, socket, head);
+    if (bare && bare.shouldRoute(req)) {
+        try {
+            bare.routeUpgrade(req, socket, head);
+        } catch (error) {
+            console.error('Bare server upgrade error:', error);
+            // Reset bare server on error
+            bare = null;
+            socket.end();
+        }
     } else {
         socket.end();
     }

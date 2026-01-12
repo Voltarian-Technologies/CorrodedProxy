@@ -6,7 +6,6 @@ const Corroded = require('../lib/server');
 const createUrlBlocker = require('../lib/server/url-blocker');
 
 const urlBlocker = createUrlBlocker({
-    blockMessage: 'This site is blocked by Corroded Proxy for security and productivity reasons.',
     statusCode: 403
 });
 

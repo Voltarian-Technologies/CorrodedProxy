@@ -1,8 +1,17 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const bareServer = require('@tomphttp/bare-server-node');
+
+const bare = bareServer('/bare/');
 
 const server = http.createServer((request, response) => {
+    // Handle bare server requests for Ultraviolet
+    if (bare.shouldRoute(request)) {
+        bare.routeRequest(request, response);
+        return;
+    }
+
     // Serve UV bundle files
     if (request.url.startsWith('/uv/')) {
         const filePath = path.join(__dirname, request.url);
@@ -61,4 +70,12 @@ const server = http.createServer((request, response) => {
 
 server.listen(process.env.PORT || 65440, () => {
     console.log(`HTTP server running on port ${process.env.PORT || 65440}`);
+});
+
+server.on('upgrade', (req, socket, head) => {
+    if (bare.shouldRoute(req)) {
+        bare.routeUpgrade(req, socket, head);
+    } else {
+        socket.end();
+    }
 });

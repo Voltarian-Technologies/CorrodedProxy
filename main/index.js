@@ -54,6 +54,6 @@ server.on('upgrade', (clientRequest, clientSocket, clientHead) =>
     proxy.upgrade(clientRequest, clientSocket, clientHead)
 );
 
-server.listen(process.env.PORT || 25569, () => {
-    console.log(`HTTP server running on port ${process.env.PORT || 25569}`);
+server.listen(process.env.PORT || 65440, () => {
+    console.log(`HTTP server running on port ${process.env.PORT || 65440}`);
 });

@@ -1,9 +1,9 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const bareServer = require('@tomphttp/bare-server-node');
+const { createBareServer } = require('@tomphttp/bare-server-node');
 
-const bare = bareServer('/bare/');
+const bare = createBareServer('/bare/');
 
 const server = http.createServer((request, response) => {
     // Handle bare server requests for Ultraviolet

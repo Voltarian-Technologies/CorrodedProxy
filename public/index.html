@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>VoltaTECH - Corroded Proxy</title>
+        <meta name="description" content="Corroded Proxy is a lightweight, open-source web proxy that allows you to browse the internet securely and anonymously.">
+	<link rel="icon" type="image/png" href="./logo.png"/>
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+        
+        <script src="/scram/scramjet.all.js"></script>
+        <script src="/baremux/index.js"></script>
+        
+        <link rel="stylesheet" href="index.css" />
+        <script src="register-sw.js" defer></script>
+        <script src="search.js" defer></script>
+        <script src="index.js" defer></script>
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <div class="logo">
+                    <img alt="" src="./logo.png"/>                </div>
+                <div>
+                    <h1>Corroded Proxy</h1>
+                    <p class="lead">Enter a URL below to open it through the proxy (https:// will be added automatically).
+                </p>
+                </div>
+            </header>
+            <form id="sj-form" class="form">
+                <input
+                    id="sj-search-engine"
+                    value="https://www.google.com/search?q=%s"
+                    type="hidden"
+                />
+                <input id="sj-address" name="url" type="search" placeholder="example.com, http://example.com or, https://example.com" aria-label="URL input">
+                <input id="go" class="btn" type="button" value="Open">
+            </form>
+            <div class="meta">
+                <div class="links">
+                    <a class="github" href="https://github.com/Voltarian-Technologies/CorrodedProxy" target="_blank" rel="noopener">View project on GitHub</a>
+                </div>
+            </div>
+            <div class="desc">
+                <p id="sj-error"></p>
+                <pre id="sj-error-code"></pre>
+            </div>
+        </div>
+    </body>
+</html>
